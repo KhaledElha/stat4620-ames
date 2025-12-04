@@ -1,0 +1,97 @@
+---
+title: "4620 Project EDA"
+author: "Noah Ekness (ekness.1)"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+Load packages
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+
+# This was installed on my machine from a previous class STAT 3303, but may need to run again
+#install.packages("GGally")
+library(GGally)
+```
+
+Data
+```{r load data}
+ames <- read.csv("/Users/noahekness/Desktop/STAT 4620/Final Project/AmesHousing.csv", header = TRUE)
+head(ames)
+```
+
+
+Variable Selection
+```{r Variable Selection}
+glimpse(ames)
+
+# Misc.Feature, Pool.QC, Misc.Feature, Misc.Val, X3Ssn.Porch, Low.Qual.Fin.SF, Heating, Roof.Matl, Condition.2, Utilities, Street can all be removed because there is either a lot of missing values (like pool quality) or very heavily imbalanced classes with all ames houses being on a Paved Street (so it is redundant to even include).
+
+
+ames <- subset(ames, select = -c(Misc.Feature, Pool.QC, Misc.Val, X3Ssn.Porch, Low.Qual.Fin.SF, Heating, Roof.Matl, Condition.2, Utilities, Street))
+# We now have 10 less variables, making our lives easier.
+```
+
+EDA on Target Variable
+```{r EDA Sale Price}
+ggplot(ames, aes(SalePrice)) + 
+  geom_density(color = "blue") + 
+  ggtitle("Density of Ames Housing Sales", subtitle = "Exploratory Data Analysis") +
+  theme_minimal() + 
+  labs(x= "Sale Price ($)", y = "Density")
+
+paste("Mean = ", round(mean(ames$SalePrice), 2))
+paste("Median = ", round(median(ames$SalePrice), 2))
+paste("Std Dev. = ", round(sd(ames$SalePrice), 2))
+```
+
+Numerical Variables EDA
+```{r Num EDA}
+# or ggpairs later
+
+ames_numeric <- ames %>%
+  select(where(is.numeric), -PID, -Enclosed.Porch, -MS.SubClass, -Kitchen.AbvGr, -Mo.Sold, -Order, -Yr.Sold)
+
+ggcorr(ames_numeric)
+```
+
+Just from this matrix, I think that removing or ignoring any of the variables that have a white or blue tint on the far right (for sale price) would be best in predicting. The darker the red means that they are better predictors of the Sale Price target variable. 
+
+
+Categorical Variables EDA
+```{r Cat EDA}
+ames <- ames %>%
+  mutate(across(c(Neighborhood, Bldg.Type, Exter.Qual, Sale.Condition, 
+                  Bldg.Type, Sale.Type, Garage.Qual, Lot.Shape, Land.Contour, Lot.Config,
+                  House.Style, Exterior.1st, Exterior.2nd, Exter.Cond, Foundation, 
+                  Bsmt.Qual, Bsmt.Cond, Heating.QC, Fireplace.Qu,
+                  Central.Air, Kitchen.Qual, Functional, Fireplace.Qu, Garage.Type, 
+                  Garage.Finish, Garage.Cond, Paved.Drive), as.factor))
+
+# Now your original code should work
+cat_vars <- names(ames %>% select(where(is.factor)))
+for (v in cat_vars) {
+  print(
+    ames %>%
+      group_by(.data[[v]]) %>%
+      summarise(
+        n = n(),
+        median_price = median(SalePrice)
+      ) %>%
+      arrange(desc(median_price))
+  )
+}
+```
+
+
+
+Models to try:
+
+  PLS - Noah
+  Regression Tree - Khaled
+  Ridge Regression - Troy
+  LASSO - Catherine
+
+
